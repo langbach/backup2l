@@ -35,7 +35,6 @@ VER=1.6-pre2
 
 COMMON_TOOLS="date find grep gzip gunzip sed awk mount umount"
 
-
 # The following variables define the format of *.list files. Modify at your own risk.
 
 FORMAT="%8s %TD %.8TT %04U.%04G %04m %p"     # format for *.list files
@@ -782,6 +781,13 @@ do_backup ()
         done
     fi
 
+    # Do qcow2 snapshot for qemu (using fi backup https://github.com/dguerri/LibVirtKvm-scripts)
+    if [ ! -z "$QCOW2_IMG" ]; then
+        echo
+        echo "Preparing qcow2 snapshots:" $QCOW2_IMG "for level:" $SAVED_LEVEL
+	do_qcow2_snapshot $SAVED_LEVEL
+    fi
+
     # Prepare backup...
     echo
     prepare_backup "Preparing" $SAVED_LEVEL
@@ -1227,7 +1233,24 @@ EOT
 }
 
 
+##################################################
+# Performing of snapshot of virtual machines 
 
+do_qcow2_snapshot ()
+{
+    require_tools fi-backup.sh
+    if [ "$LEVEL" = "0" ]; then
+        echo "Consolidation and blockpull of QCOW2 images:" $QCOW2_IMG
+	fi-backup.sh -m blockpull -C $QCOW2_IMG
+    elif [ "$LEVEL" = "1" ]; then
+        echo "Blockcommit of QCOW2 images:" $QCOW2_IMG
+	fi-backup.sh -m blockcommit $QCOW2_IMG
+    else
+        echo "Nothing to do with QCOW2 images..."
+    fi
+
+
+}
 
 
 ##################################################
@@ -1419,3 +1442,4 @@ esac
 # Unmount backup device if it was mounted
 cd /            # avoid "device is busy" during unmount
 umount_dev
+
